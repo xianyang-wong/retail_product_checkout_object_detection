@@ -112,6 +112,23 @@ def write_yolo_annotation_to_txt(json_df, data_dir):
         f.close()
 
 
+def write_img_file_path_to_txt(data_dir, txt_name):
+
+    file_list = os.listdir(os.path.join(os.getcwd(), data_dir))
+    file_list = [data_dir + f for f in file_list if f.endswith(".jpg")]
+
+    f = open(data_dir + txt_name, "w+")
+
+    for i in range(len(file_list)):
+        if i < len(file_list):
+            f.write(str(file_list[i]))
+            f.write('\n')
+        else:
+            f.write(str(file_list[i]))
+
+    f.close()
+
+
 def from_yolo_to_cor(box, shape):
     img_h, img_w, _ = shape
     # x1, y1 = ((x + witdth)/2)*img_width, ((y + height)/2)*img_height
@@ -141,18 +158,21 @@ if __name__ == '__main__':
     train_json_df['yolo_annotation'] = train_json_df['category_id'].apply(lambda x: [x]) + train_json_df['yolo_bbox']
     train_json_df.to_csv('data/train_json_df.csv', index=False)
     write_yolo_annotation_to_txt(train_json_df,'data/train2019/')
+    write_img_file_path_to_txt('data/train2019/', 'train.txt')
 
     val_json_df = get_json_df(val_json_file_path, 'data/val2019/')
     val_json_df['yolo_bbox'] = val_json_df[['image_width','image_height','image_bbox']].apply(lambda x: get_yolo_annotations(x[0],x[1],x[2]),axis=1)
     val_json_df['yolo_annotation'] = val_json_df['category_id'].apply(lambda x: [x]) + val_json_df['yolo_bbox']
     val_json_df.to_csv('data/val_json_df.csv', index=False)
     write_yolo_annotation_to_txt(val_json_df, 'data/val2019/')
+    write_img_file_path_to_txt('data/val2019/', 'validation.txt')
 
     test_json_df = get_json_df(test_json_file_path, 'data/test2019/')
     test_json_df['yolo_bbox'] = test_json_df[['image_width','image_height','image_bbox']].apply(lambda x: get_yolo_annotations(x[0],x[1],x[2]),axis=1)
     test_json_df['yolo_annotation'] = test_json_df['category_id'].apply(lambda x: [x]) + test_json_df['yolo_bbox']
     test_json_df.to_csv('data/test_json_df.csv', index=False)
     write_yolo_annotation_to_txt(test_json_df, 'data/test2019/')
+    write_img_file_path_to_txt('data/test2019/', 'test.txt')
 
 
     # # Select particular image and display bounding box
