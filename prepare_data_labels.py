@@ -1,88 +1,63 @@
 from utils.utils import *
-import os
 import boxx
 import numpy as np
 import pandas as pd
+import os
 from matplotlib import pyplot as plt
 from PIL import Image
 import time
 from tqdm import tqdm
 
 # # Functions
-def get_json_images_df(json_filepath):
+def get_json_images_df(json_file_path):
 
-    json = boxx.loadjson(json_filepath)
+    json = boxx.loadjson(json_file_path)
 
-    json_images_df = pd.DataFrame()
+    json_images_df = pd.DataFrame(json['images'])
 
-    for i in tqdm(range(len(json['images']))):
-        file_name = json['images'][i]['file_name']
-        image_width = json['images'][i]['width']
-        image_height = json['images'][i]['height']
-        image_id = json['images'][i]['id']
+    json_images_df = json_images_df.rename(columns={'height':'image_height',
+                                                    'width':'image_width',
+                                                    'id':'image_id'})
 
-        record = pd.DataFrame([[file_name, image_width, image_height, image_id]],
-                              columns=['file_name', 'image_width', 'image_height', 'image_id'])
-
-        json_images_df = json_images_df.append(record, ignore_index=True)
+    json_images_df = json_images_df[['file_name','image_width','image_height','image_id']]
 
     return json_images_df
 
 
-def get_json_annotations_df(json_filepath):
+def get_json_annotations_df(json_file_path):
 
-    json = boxx.loadjson(json_filepath)
+    json = boxx.loadjson(json_file_path)
 
-    json_annotations_df = pd.DataFrame()
+    json_annotations_df = pd.DataFrame(json['annotations'])
 
-    for i in tqdm(range(len(json['annotations']))):
-        image_id = json['annotations'][i]['image_id']
-        image_area = json['annotations'][i]['area']
-        image_bbox = json['annotations'][i]['bbox']
-        image_point_xy = json['annotations'][i]['point_xy']
-        image_segmentation = json['annotations'][i]['segmentation']
-        is_crowded = json['annotations'][i]['iscrowd']
-        category_id = json['annotations'][i]['category_id']
+    json_annotations_df = json_annotations_df.rename(columns={'area':'image_area',
+                                                              'bbox':'image_bbox',
+                                                              'point_xy':'image_point_xy',
+                                                              'segmentation':'image_segmentation',
+                                                              'iscrowd':'is_crowded'})
 
-        record = pd.DataFrame([[image_id, image_area, image_bbox, image_point_xy,
-                                image_segmentation, is_crowded, category_id]],
-                              columns=['image_id','image_area','image_bbox','image_point_xy',
-                                       'image_segmentation','is_crowded','category_id'])
-
-        json_annotations_df = json_annotations_df.append(record, ignore_index=True)
+    json_annotations_df = json_annotations_df[['image_id','image_area','image_bbox','image_point_xy',
+                                               'image_segmentation','is_crowded','category_id']]
 
     return json_annotations_df
 
 
-def get_json_items_df(json_filepath):
+def get_json_items_df(json_file_path):
 
-    json = boxx.loadjson(json_filepath)
+    json = boxx.loadjson(json_file_path)
 
-    json_items_df = pd.DataFrame()
+    json_items_df = pd.DataFrame(json['__raw_Chinese_name_df'])
 
-    for i in tqdm(range(len(json['__raw_Chinese_name_df']))):
-        sku_name = train_js['__raw_Chinese_name_df'][i]['sku_name']
-        category_id = train_js['__raw_Chinese_name_df'][i]['category_id']
-        sku_class = train_js['__raw_Chinese_name_df'][i]['sku_class']
-        code = train_js['__raw_Chinese_name_df'][i]['code']
-        shelf = train_js['__raw_Chinese_name_df'][i]['shelf']
-        num = train_js['__raw_Chinese_name_df'][i]['num']
-        name = train_js['__raw_Chinese_name_df'][i]['name']
-        clas = train_js['__raw_Chinese_name_df'][i]['clas']
-        known = train_js['__raw_Chinese_name_df'][i]['known']
-        ind = train_js['__raw_Chinese_name_df'][i]['ind']
-
-        record = pd.DataFrame([[sku_name, category_id, sku_class, code, shelf, num, name, clas, known, ind]],
-                              columns=['sku_name','category_id','sku_class','code','shelf','num','name','clas','known','ind'])
-        json_items_df = json_items_df.append(record, ignore_index=True)
+    json_items_df = json_items_df[['sku_name','category_id','sku_class','code',
+                                   'shelf','num','name','clas','known','ind']]
 
     return json_items_df
 
 
-def get_json_df(json_filepath, data_dir):
+def get_json_df(json_file_path, data_dir):
 
-    json_images_df = get_json_images_df(json_filepath)
-    json_annotations_df = get_json_annotations_df(json_filepath)
+    json_images_df = get_json_images_df(json_file_path)
+    json_annotations_df = get_json_annotations_df(json_file_path)
 
     json_df = json_images_df.merge(json_annotations_df,
                                    how='left',
@@ -126,26 +101,31 @@ def draw_boxes(img, boxes, shape):
     plt.imshow(img)
 
 
-train_js = boxx.loadjson('/data/instances_train2019.json')
+if __name__ == '__main__':
+    train_json_file_path = 'data/instances_train2019.json'
+    val_json_file_path = 'data/instances_val2019.json'
+    test_json_file_path = 'data/instances_test2019.json'
 
-train_json_filepath = '/data/instances_train2019.json'
-json_items_df = get_json_items_df(train_json_filepath)
-train_json_df = get_json_df(train_json_filepath, 'data/train2019/')
-train_json_df['yolo_bbox'] = train_json_df[['image_width','image_height','image_bbox']].apply(lambda x: get_yolo_annotations(x[0],x[1],x[2]),axis=1)
+    json_items_df = get_json_items_df(train_json_file_path)
+    json_items_df.to_csv('json_items_df.csv', ignore_index=True)
 
-val_json_filepath = '/data/instances_val2019.json'
-val_json_df = get_json_df(val_json_filepath, 'data/val2019/')
-val_json_df['yolo_bbox'] = val_json_df[['image_width','image_height','image_bbox']].apply(lambda x: get_yolo_annotations(x[0],x[1],x[2]),axis=1)
+    train_json_df = get_json_df(train_json_file_path, 'data/train2019/')
+    train_json_df['yolo_bbox'] = train_json_df[['image_width','image_height','image_bbox']].apply(lambda x: get_yolo_annotations(x[0],x[1],x[2]),axis=1)
+    train_json_df.to_csv('train_json_df.csv', ignore_index=True)
 
-test_json_filepath = '/data/instances_test2019.json'
-test_json_df = get_json_df(test_json_filepath, 'data/test2019/')
-test_json_df['yolo_bbox'] = test_json_df[['image_width','image_height','image_bbox']].apply(lambda x: get_yolo_annotations(x[0],x[1],x[2]),axis=1)
+    val_json_df = get_json_df(val_json_file_path, 'data/val2019/')
+    val_json_df['yolo_bbox'] = val_json_df[['image_width','image_height','image_bbox']].apply(lambda x: get_yolo_annotations(x[0],x[1],x[2]),axis=1)
+    val_json_df.to_csv('val_json_df.csv', ignore_index=True)
 
-# # Select particular image and display bounding box
-i = 612
-img = np.array(Image.open(os.path.join('data/val2019/',val_json_df['file_name'].values[i])))
-
-draw_boxes(img, list(val_json_df['yolo_bbox'][val_json_df['image_id']==val_json_df['image_id'].values[i]]),
-           (val_json_df['image_height'].values[i],
-            val_json_df['image_width'].values[i],
-            3))
+    test_json_df = get_json_df(test_json_file_path, 'data/test2019/')
+    test_json_df['yolo_bbox'] = test_json_df[['image_width','image_height','image_bbox']].apply(lambda x: get_yolo_annotations(x[0],x[1],x[2]),axis=1)
+    test_json_df.to_csv('test_json_df.csv', ignore_index=True)
+    
+    # # Select particular image and display bounding box
+    # i = 612
+    # img = np.array(Image.open(os.path.join('data/val2019/',val_json_df['file_name'].values[i])))
+    #
+    # draw_boxes(img, list(val_json_df['yolo_bbox'][val_json_df['image_id']==val_json_df['image_id'].values[i]]),
+    #            (val_json_df['image_height'].values[i],
+    #             val_json_df['image_width'].values[i],
+    #             3))
