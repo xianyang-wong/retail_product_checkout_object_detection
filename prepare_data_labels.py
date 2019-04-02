@@ -1,4 +1,3 @@
-from utils.utils import *
 import boxx
 import numpy as np
 import pandas as pd
@@ -85,6 +84,34 @@ def get_yolo_annotations(image_width, image_height, image_bbox):
     return yolo_bbox
 
 
+def write_yolo_annotation_to_txt(json_df, data_dir):
+    
+    array_of_file_name = json_df['file_name'].unique()
+    
+    for i in tqdm(range(len(array_of_file_name))):
+        file_name = array_of_file_name[i]
+        array_of_yolo_annotation = json_df[json_df['file_name'] == file_name]['yolo_annotation'].values
+
+        f = open(data_dir + str.replace(file_name, '.jpg', '.txt'), "w+")
+
+        for i in range(len(array_of_yolo_annotation)):
+            if i < len(array_of_yolo_annotation):
+                f.write(str(array_of_yolo_annotation[i][0]) + ' ' +
+                        str(array_of_yolo_annotation[i][1]) + ' ' +
+                        str(array_of_yolo_annotation[i][2]) + ' ' +
+                        str(array_of_yolo_annotation[i][3]) + ' ' +
+                        str(array_of_yolo_annotation[i][4]))
+                f.write('\n')
+            else:
+                f.write(str(array_of_yolo_annotation[i][0]) + ' ' +
+                        str(array_of_yolo_annotation[i][1]) + ' ' +
+                        str(array_of_yolo_annotation[i][2]) + ' ' +
+                        str(array_of_yolo_annotation[i][3]) + ' ' +
+                        str(array_of_yolo_annotation[i][4]))
+
+        f.close()
+
+
 def from_yolo_to_cor(box, shape):
     img_h, img_w, _ = shape
     # x1, y1 = ((x + witdth)/2)*img_width, ((y + height)/2)*img_height
@@ -107,20 +134,27 @@ if __name__ == '__main__':
     test_json_file_path = 'data/instances_test2019.json'
 
     json_items_df = get_json_items_df(train_json_file_path)
-    json_items_df.to_csv('json_items_df.csv', ignore_index=True)
+    json_items_df.to_csv('data/json_items_df.csv', index=False)
 
     train_json_df = get_json_df(train_json_file_path, 'data/train2019/')
     train_json_df['yolo_bbox'] = train_json_df[['image_width','image_height','image_bbox']].apply(lambda x: get_yolo_annotations(x[0],x[1],x[2]),axis=1)
-    train_json_df.to_csv('train_json_df.csv', ignore_index=True)
+    train_json_df['yolo_annotation'] = train_json_df['category_id'].apply(lambda x: [x]) + train_json_df['yolo_bbox']
+    train_json_df.to_csv('data/train_json_df.csv', index=False)
+    write_yolo_annotation_to_txt(train_json_df,'data/train2019/')
 
     val_json_df = get_json_df(val_json_file_path, 'data/val2019/')
     val_json_df['yolo_bbox'] = val_json_df[['image_width','image_height','image_bbox']].apply(lambda x: get_yolo_annotations(x[0],x[1],x[2]),axis=1)
-    val_json_df.to_csv('val_json_df.csv', ignore_index=True)
+    val_json_df['yolo_annotation'] = val_json_df['category_id'].apply(lambda x: [x]) + val_json_df['yolo_bbox']
+    val_json_df.to_csv('data/val_json_df.csv', index=False)
+    write_yolo_annotation_to_txt(val_json_df, 'data/val2019/')
 
     test_json_df = get_json_df(test_json_file_path, 'data/test2019/')
     test_json_df['yolo_bbox'] = test_json_df[['image_width','image_height','image_bbox']].apply(lambda x: get_yolo_annotations(x[0],x[1],x[2]),axis=1)
-    test_json_df.to_csv('test_json_df.csv', ignore_index=True)
-    
+    test_json_df['yolo_annotation'] = test_json_df['category_id'].apply(lambda x: [x]) + test_json_df['yolo_bbox']
+    test_json_df.to_csv('data/test_json_df.csv', index=False)
+    write_yolo_annotation_to_txt(test_json_df, 'data/test2019/')
+
+
     # # Select particular image and display bounding box
     # i = 612
     # img = np.array(Image.open(os.path.join('data/val2019/',val_json_df['file_name'].values[i])))
