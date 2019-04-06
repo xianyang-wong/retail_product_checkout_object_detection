@@ -1,6 +1,9 @@
 import boxx
 import numpy as np
 import pandas as pd
+pd.set_option('display.max_rows', 500)
+pd.set_option('display.max_columns', 500)
+pd.set_option('display.width', 1000)
 import os
 from matplotlib import pyplot as plt
 from PIL import Image
@@ -153,26 +156,79 @@ if __name__ == '__main__':
     json_items_df = get_json_items_df(train_json_file_path)
     json_items_df.to_csv('data/json_items_df.csv', index=False)
 
+    retinanet_class_map_df = json_items_df[['name']].copy()
+    retinanet_class_map_df['id'] = np.arange(0,len(retinanet_class_map_df['name']))
+    retinanet_class_map_df.to_csv('retinanet_class_map_df.csv', index=False)
+
+    item_names = json_items_df['name'].values
+    f = open('data/retail-product-checkout.names', "w+", encoding='utf-8')
+    for i in range(len(item_names)):
+        if i < len(item_names):
+            f.write(item_names[i])
+            f.write('\n')
+        else:
+            f.write(item_names[i])
+    f.close()
+
     train_json_df = get_json_df(train_json_file_path, 'data/train2019/')
+    train_json_df = train_json_df.merge(json_items_df[['category_id','name','ind']],
+                                        how='left',
+                                        left_on='category_id',
+                                        right_on='category_id')
+    train_json_df['file_path'] = train_json_df['data_directory'] + train_json_df['file_name']
+    train_json_df['x1'] = train_json_df['image_bbox'].apply(lambda x: int(x[0]))
+    train_json_df['y1'] = train_json_df['image_bbox'].apply(lambda x: int(x[1]))
+    train_json_df['x2'] = train_json_df['image_bbox'].apply(lambda x: int(x[0] + x[2]))
+    train_json_df['y2'] = train_json_df['image_bbox'].apply(lambda x: int(x[1] + x[3]))
+
+    retinanet_train_df = train_json_df[['file_path','x1','y1','x2','y2','name']].copy()
+    retinanet_train_df.to_csv('data/retinanet_train_df.csv', index=False)
+
     train_json_df['yolo_bbox'] = train_json_df[['image_width','image_height','image_bbox']].apply(lambda x: get_yolo_annotations(x[0],x[1],x[2]),axis=1)
-    train_json_df['yolo_annotation'] = train_json_df['category_id'].apply(lambda x: [x]) + train_json_df['yolo_bbox']
+    train_json_df['yolo_annotation'] = train_json_df['ind'].apply(lambda x: [x]) + train_json_df['yolo_bbox']
     train_json_df.to_csv('data/train_json_df.csv', index=False)
     write_yolo_annotation_to_txt(train_json_df,'data/train2019/')
-    write_img_file_path_to_txt('data/train2019/', 'train.txt')
+    write_img_file_path_to_txt('data/', 'train.txt')
 
     val_json_df = get_json_df(val_json_file_path, 'data/val2019/')
+    val_json_df = val_json_df.merge(json_items_df[['category_id','name','ind']],
+                                        how='left',
+                                        left_on='category_id',
+                                        right_on='category_id')
+    val_json_df['file_path'] = val_json_df['data_directory'] + val_json_df['file_name']
+    val_json_df['x1'] = val_json_df['image_bbox'].apply(lambda x: int(x[0]))
+    val_json_df['y1'] = val_json_df['image_bbox'].apply(lambda x: int(x[1]))
+    val_json_df['x2'] = val_json_df['image_bbox'].apply(lambda x: int(x[0] + x[2]))
+    val_json_df['y2'] = val_json_df['image_bbox'].apply(lambda x: int(x[1] + x[3]))
+
+    retinanet_val_df = val_json_df[['file_path','x1','y1','x2','y2','name']].copy()
+    retinanet_val_df.to_csv('data/retinanet_val_df.csv', index=False)
+
     val_json_df['yolo_bbox'] = val_json_df[['image_width','image_height','image_bbox']].apply(lambda x: get_yolo_annotations(x[0],x[1],x[2]),axis=1)
-    val_json_df['yolo_annotation'] = val_json_df['category_id'].apply(lambda x: [x]) + val_json_df['yolo_bbox']
+    val_json_df['yolo_annotation'] = val_json_df['ind'].apply(lambda x: [x]) + val_json_df['yolo_bbox']
     val_json_df.to_csv('data/val_json_df.csv', index=False)
     write_yolo_annotation_to_txt(val_json_df, 'data/val2019/')
-    write_img_file_path_to_txt('data/val2019/', 'validation.txt')
+    write_img_file_path_to_txt('data', 'validation.txt')
 
     test_json_df = get_json_df(test_json_file_path, 'data/test2019/')
+    test_json_df = test_json_df.merge(json_items_df[['category_id','name','ind']],
+                                        how='left',
+                                        left_on='category_id',
+                                        right_on='category_id')
+    test_json_df['file_path'] = test_json_df['data_directory'] + test_json_df['file_name']
+    test_json_df['x1'] = test_json_df['image_bbox'].apply(lambda x: int(x[0]))
+    test_json_df['y1'] = test_json_df['image_bbox'].apply(lambda x: int(x[1]))
+    test_json_df['x2'] = test_json_df['image_bbox'].apply(lambda x: int(x[0] + x[2]))
+    test_json_df['y2'] = test_json_df['image_bbox'].apply(lambda x: int(x[1] + x[3]))
+
+    retinanet_test_df = test_json_df[['file_path','x1','y1','x2','y2','name']].copy()
+    retinanet_test_df.to_csv('data/retinanet_test_df.csv', index=False)
+    
     test_json_df['yolo_bbox'] = test_json_df[['image_width','image_height','image_bbox']].apply(lambda x: get_yolo_annotations(x[0],x[1],x[2]),axis=1)
-    test_json_df['yolo_annotation'] = test_json_df['category_id'].apply(lambda x: [x]) + test_json_df['yolo_bbox']
+    test_json_df['yolo_annotation'] = test_json_df['ind'].apply(lambda x: [x]) + test_json_df['yolo_bbox']
     test_json_df.to_csv('data/test_json_df.csv', index=False)
     write_yolo_annotation_to_txt(test_json_df, 'data/test2019/')
-    write_img_file_path_to_txt('data/test2019/', 'test.txt')
+    write_img_file_path_to_txt('data', 'test.txt')
 
 
     # # Select particular image and display bounding box
